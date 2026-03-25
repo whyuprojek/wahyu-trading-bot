@@ -1,33 +1,61 @@
-// Perintah /list untuk melihat alert yang aktif
+const { Telegraf } = require('telegraf');
+const { createClient } = require('@supabase/supabase-js');
+
+// 1. Inisialisasi Supabase
+const supabase = createClient(
+  process.env.SUPABASE_URL, 
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+// 2. Inisialisasi Bot
+const bot = new Telegraf(process.env.BOT_TOKEN);
+
+// --- LOGIKA BOT ---
+
+bot.start((ctx) => {
+  ctx.reply(`Halo ${ctx.from.first_name}! 👋\nBot Wahyu Projek aktif. Gunakan /set [harga] untuk alert XAUUSD.`);
+});
+
+bot.command('set', async (ctx) => {
+  const price = parseFloat(ctx.message.text.split(' ')[1]);
+  if (isNaN(price)) return ctx.reply('⚠️ Contoh: /set 2150');
+
+  const { error } = await supabase.from('alerts').insert([{ 
+    user_id: ctx.chat.id.toString(), 
+    target_price: price,
+    status: 'pending'
+  }]);
+  
+  if (error) return ctx.reply('❌ Database Error. Cek Supabase!');
+  ctx.reply(`✅ Alert dipasang di harga $${price}`);
+});
+
 bot.command('list', async (ctx) => {
-  const { data: alerts, error } = await supabase
-    .from('alerts')
-    .select('*')
-    .eq('user_id', ctx.chat.id.toString())
-    .eq('status', 'pending');
+    const { data: alerts, error } = await supabase
+      .from('alerts')
+      .select('*')
+      .eq('user_id', ctx.chat.id.toString())
+      .eq('status', 'pending');
+  
+    if (error) return ctx.reply('❌ Gagal ambil data.');
+    if (!alerts || alerts.length === 0) return ctx.reply('📭 Alert kosong.');
+  
+    let pesan = '📋 Alert Aktif:\n';
+    alerts.forEach((a) => pesan += `- $${a.target_price}\n`);
+    ctx.reply(pesan);
+});
 
-  if (error) return ctx.reply('❌ Gagal mengambil data.');
-
-  if (alerts.length === 0) {
-    return ctx.reply('📭 Tidak ada alert aktif saat ini.');
+// 3. Handler untuk Vercel (Wajib ada!)
+export default async function handler(req, res) {
+  if (req.method === 'POST') {
+    try {
+      await bot.handleUpdate(req.body);
+      res.status(200).send('OK');
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Bot Error');
+    }
+  } else {
+    res.status(200).send('Bot is Running...');
   }
-
-  let pesan = '📋 <b>Daftar Alert Aktif (XAUUSD):</b>\n\n';
-  alerts.forEach((a, index) => {
-    pesan += `${index + 1}. Harga: <b>$${a.target_price}</b>\n`;
-  });
-
-  ctx.reply(pesan, { parse_mode: 'HTML' });
-});
-
-// Perintah /clear untuk menghapus semua alert pending
-bot.command('clear', async (ctx) => {
-  const { error } = await supabase
-    .from('alerts')
-    .delete()
-    .eq('user_id', ctx.chat.id.toString())
-    .eq('status', 'pending');
-
-  if (error) return ctx.reply('❌ Gagal menghapus alert.');
-  ctx.reply('🗑️ Semua alert aktif berhasil dihapus!');
-});
+}
