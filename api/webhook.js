@@ -1,28 +1,33 @@
-const { Telegraf } = require('telegraf');
-const { createClient } = require('@supabase/supabase-js');
+// Perintah /list untuk melihat alert yang aktif
+bot.command('list', async (ctx) => {
+  const { data: alerts, error } = await supabase
+    .from('alerts')
+    .select('*')
+    .eq('user_id', ctx.chat.id.toString())
+    .eq('status', 'pending');
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const bot = new Telegraf(process.env.BOT_TOKEN);
+  if (error) return ctx.reply('❌ Gagal mengambil data.');
 
-bot.start((ctx) => ctx.reply("Welcome Wahyu! Gunakan /set [harga] untuk alert XAUUSD."));
+  if (alerts.length === 0) {
+    return ctx.reply('📭 Tidak ada alert aktif saat ini.');
+  }
 
-bot.command('set', async (ctx) => {
-  const price = parseFloat(ctx.message.text.split(' ')[1]);
-  if (!price) return ctx.reply('Contoh: /set 2150');
+  let pesan = '📋 <b>Daftar Alert Aktif (XAUUSD):</b>\n\n';
+  alerts.forEach((a, index) => {
+    pesan += `${index + 1}. Harga: <b>$${a.target_price}</b>\n`;
+  });
 
-  await supabase.from('alerts').insert([{ 
-    user_id: ctx.chat.id.toString(), 
-    target_price: price 
-  }]);
-  
-  ctx.reply(`✅ Alert dipasang di harga $${price}`);
+  ctx.reply(pesan, { parse_mode: 'HTML' });
 });
 
-export default async function handler(req, res) {
-  if (req.method === 'POST') {
-    await bot.handleUpdate(req.body);
-    res.status(200).send('OK');
-  } else {
-    res.status(200).send('Bot Running');
-  }
-}
+// Perintah /clear untuk menghapus semua alert pending
+bot.command('clear', async (ctx) => {
+  const { error } = await supabase
+    .from('alerts')
+    .delete()
+    .eq('user_id', ctx.chat.id.toString())
+    .eq('status', 'pending');
+
+  if (error) return ctx.reply('❌ Gagal menghapus alert.');
+  ctx.reply('🗑️ Semua alert aktif berhasil dihapus!');
+});

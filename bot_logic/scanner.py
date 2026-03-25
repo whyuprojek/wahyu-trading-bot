@@ -14,12 +14,19 @@ def run():
     # Cek alert di Supabase
     alerts = supabase.table("alerts").select("*").eq("status", "pending").execute()
 
+    # Cari bagian loop 'for a in alerts.data:' di scanner.py, ganti dengan ini:
+
     for a in alerts.data:
-        if curr_price >= a['target_price']:
-            msg = f"🔔 ALERT: XAUUSD menyentuh ${a['target_price']}!"
-            requests.post(f"https://api.telegram.org/bot{os.getenv('BOT_TOKEN')}/sendMessage", 
-                          json={"chat_id": a['user_id'], "text": msg})
+        target = a['target_price']
+        
+        # Logika: Alert bunyi jika harga menyentuh/melewati target
+        # Kita buat fleksibel (baik harga naik atau turun)
+        if abs(curr_price - target) <= 0.5: # Toleransi 0.5 point/pips
+            msg = f"🔔 <b>PRICE ALERT!</b>\n\nXAUUSD menyentuh target: <b>${target}</b>\nHarga saat ini: ${curr_price}"
+            url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+            requests.post(url, json={"chat_id": a['user_id'], "text": msg, "parse_mode": "HTML"})
             
+            # Tandai sudah bunyi
             supabase.table("alerts").update({"status": "triggered"}).eq("id", a['id']).execute()
 
 if __name__ == "__main__":
