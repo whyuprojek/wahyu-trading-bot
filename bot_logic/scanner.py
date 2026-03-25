@@ -1,7 +1,11 @@
 import os
 import requests
-from tvDatafeed import TvDatafeed, Interval
-from supabase import create_client
+from tvDatafeed import TvDatafeed, Interval  # T-nya besar, D-nya besar
+from supabase import create_client           # s-nya kecil
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_ROLE_KEY"))
 tv = TvDatafeed()
