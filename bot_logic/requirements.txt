@@ -1,0 +1,4 @@
+pandas
+requests
+supabase
+git+https://github.com/rongardF/tvdatafeed.git

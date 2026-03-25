@@ -1,0 +1,22 @@
+name: XAUUSD Scanner
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Cek tiap 5 menit
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      - name: Run
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          pip install -r bot_logic/requirements.txt
+          python bot_logic/scanner.py
