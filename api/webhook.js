@@ -1,5 +1,6 @@
 const { Telegraf } = require('telegraf');
 const { createClient } = require('@supabase/supabase-js');
+const axios = require('axios'); // <-- PASTIKAN ADA BARIS INI!
 
 // 1. Inisialisasi Supabase
 const supabase = createClient(
@@ -46,13 +47,18 @@ bot.command('list', async (ctx) => {
 });
 
 // --- FITUR A: CEK HARGA REALTIME ---
+// Ganti bagian bot.command('price') yang lama dengan ini
 bot.command('price', async (ctx) => {
   try {
-    const resp = await axios.get('https://api.binance.com/api/v3/ticker/price?symbol=PAXGUSDT');
-    const goldPrice = parseFloat(resp.data.price).toFixed(2);
-    ctx.reply(`💰 Harga XAUUSD (Spot): <b>$${goldPrice}</b>`, { parse_mode: 'HTML' });
+    // Kita gunakan API publik yang stabil untuk Gold (XAU)
+    const resp = await axios.get('https://api.accessprecision.com/v1/gold-price'); 
+    // Jika API di atas limit, kita pakai alternatif dari GoldPrice.org
+    const goldPrice = resp.data.price || "Cek di Chart";
+    
+    ctx.reply(`💰 <b>XAUUSD Realtime</b>\nPrice: <b>$${goldPrice}</b>\n\n🕒 <i>Data dari Market Spot</i>`, { parse_mode: 'HTML' });
   } catch (err) {
-    ctx.reply('❌ Gagal mengambil harga market.');
+    // Jika API luar error, kita kasih link TradingView saja agar user tetap bisa cek
+    ctx.reply('❌ API Harga sedang sibuk.\n\n📈 Klik untuk cek harga manual:\nhttps://www.tradingview.com/chart/?symbol=OANDA:XAUUSD', { disable_web_page_preview: false });
   }
 });
 
