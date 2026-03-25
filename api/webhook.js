@@ -45,6 +45,33 @@ bot.command('list', async (ctx) => {
     ctx.reply(pesan);
 });
 
+// --- FITUR A: CEK HARGA REALTIME ---
+bot.command('price', async (ctx) => {
+  try {
+    const resp = await axios.get('https://api.binance.com/api/v3/ticker/price?symbol=PAXGUSDT');
+    const goldPrice = parseFloat(resp.data.price).toFixed(2);
+    ctx.reply(`💰 Harga XAUUSD (Spot): <b>$${goldPrice}</b>`, { parse_mode: 'HTML' });
+  } catch (err) {
+    ctx.reply('❌ Gagal mengambil harga market.');
+  }
+});
+
+// --- FITUR B: HAPUS ALERT SPESIFIK ---
+bot.command('delete', async (ctx) => {
+  const price = parseFloat(ctx.message.text.split(' ')[1]);
+  if (isNaN(price)) return ctx.reply('⚠️ Contoh: /delete 2150');
+
+  const { error } = await supabase
+    .from('alerts')
+    .delete()
+    .eq('user_id', ctx.chat.id.toString())
+    .eq('target_price', price)
+    .eq('status', 'pending');
+
+  if (error) return ctx.reply('❌ Gagal menghapus alert.');
+  ctx.reply(`🗑️ Alert di harga $${price} telah dihapus.`);
+});
+
 // 3. Handler untuk Vercel (Wajib ada!)
 export default async function handler(req, res) {
   if (req.method === 'POST') {
